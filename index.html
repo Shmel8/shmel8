@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>game</title>
+  <!-- <link rel="stylesheet" href="style.css"> -->
+</head>
+
+ 
+<!-- <canvas id="webgl_canvas" width=800 height=800></canvas> -->
+<body>
+  <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0;"></canvas>
+  <script src="interface.js"></script>
+  <script>
+
+    const env = { ...api };
+
+    fetchAndInstantiate('main.wasm', { env }).then(instance => {
+      memory = instance.exports.memory;
+      instance.exports.init();
+      const wasm_update = instance.exports.update;
+      document.addEventListener('keydown', e => instance.exports.keyboard(e.keyCode, 1));
+      document.addEventListener('keyup', e => instance.exports.keyboard(e.keyCode, 0));
+      document.addEventListener('mousedown', e => instance.exports.mouse_key(e.button, 1));
+      document.addEventListener('mouseup', e => instance.exports.mouse_key(e.button, 0));
+      document.addEventListener('mousemove', e => instance.exports.mouse_motion(e.x, e.y));
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        instance.exports.resize(canvas.width, canvas.height);
+      }
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas(); // Установка начального размера
+
+      function render(timestamp) {
+        wasm_update(timestamp);
+        window.requestAnimationFrame(render);
+      }
+      window.requestAnimationFrame(render);
+    });
+
+    function fetchAndInstantiate(url, importObject) {
+      return fetch(url)
+        .then(response => response.arrayBuffer())
+        .then(bytes => WebAssembly.instantiate(bytes, importObject))
+        .then(results => results.instance);
+    }
+  </script>
+</body>
+
+</html>
