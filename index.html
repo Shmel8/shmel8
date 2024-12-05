@@ -25,6 +25,8 @@
       document.addEventListener('mousedown', e => instance.exports.mouse_key(e.button, 1));
       document.addEventListener('mouseup', e => instance.exports.mouse_key(e.button, 0));
       document.addEventListener('mousemove', e => instance.exports.mouse_motion(e.x, e.y));
+      document.addEventListener('touchstart', e => instance.exports.mouse_motion(0, 1));
+      document.addEventListener('touchend', e => instance.exports.mouse_motion(0, 0));
 
       function resizeCanvas() {
         canvas.width = window.innerWidth;
