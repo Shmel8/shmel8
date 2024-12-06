@@ -1,142 +1,3 @@
-const bigToUint8Array = (big) => {
-  const big0 = BigInt(0)
-  const big1 = BigInt(1)
-  const big8 = BigInt(8)
-  if (big < big0) {
-    const bits = (BigInt(big.toString(2).length) / big8 + big1) * big8
-    const prefix1 = big1 << bits
-    big += prefix1
-  }
-  let hex = big.toString(16)
-  if (hex.length % 2) {
-    hex = '0' + hex
-  }
-  const len = hex.length / 2
-  const u8 = new Uint8Array(len)
-  let i = 0
-  let j = 0
-  while (i < len) {
-    u8[i] = parseInt(hex.slice(j, j + 2), 16)
-    i += 1
-    j += 2
-  }
-  return u8
-}
-
-const u8ToNumber = (array) => {
-  let number = 0;
-  let pow = 0;
-  for (let i = array.length - 1; i >= 0; i--) {
-    number += array[i] * (256 ** pow);
-    pow += 1;
-  }
-  return number;
-}
-
-const getFileText = (path) => {
-    let request = new XMLHttpRequest();
-    // TODO (12 May 2022 sam): This is being deprecated... How can we do sync otherwise?
-    request.open('GET', path, false);
-    request.send(null);
-    if (request.status !== 200) return false;
-    return request.responseText;
-}
-
-const readWebFile = (path, ptr, len) => {
-    path = wasmString(path);
-    // read text from URL location
-    const text = getFileText(path);
-    if (text === false) return false;
-    if (text.length != len) {
-      console.log("file length does not match requested length", path, len);
-      return false;
-    }
-    const fileContents = new Uint8Array(memory.buffer, ptr, len);
-    for (let i=0; i<len; i++) {
-      fileContents[i] = text.charCodeAt(i);
-    }
-    return true;    
-}
-
-const readWebFileSize = (path) => {
-    path = wasmString(path);
-    // read text from URL location
-    const text = getFileText(path);
-    if (text === false) return -1;
-    return text.length;
-}
-
-const getStorageText = (path) => {
-    const text = localStorage.getItem(path);
-    if (text === null) return false;
-    return text;
-}
-
-const readStorageFileSize = (path) => {
-  path = wasmString(path);
-  const text = getStorageText(path);
-  if (text === false) return -1;
-  return text.length;
-}
-
-const readStorageFile = (path, ptr, len) => {
-    path = wasmString(path);
-    // read text from URL location
-    const text = getStorageText(path);
-    if (text === false) return false;
-    if (text.length != len) {
-      console.log("file length does not match requested length", path, len);
-      return false;
-    }
-    const fileContents = new Uint8Array(memory.buffer, ptr, len);
-    for (let i=0; i<len; i++) {
-      fileContents[i] = text.charCodeAt(i);
-    }
-    return true;    
-}
-
-const writeStorageFile = (path, text) => {
-    path = wasmString(path);
-    text = wasmString(text);
-    localStorage.setItem(path, text);
-}
-
-const wasmString = (ptr) => {
-  const bytes = new Uint8Array(memory.buffer, ptr, 1024);
-  let str = '';
-  for (let i = 0; ; i++) {
-    const c = String.fromCharCode(bytes[i]);
-    if (c == '\0') break;
-    str += c;
-  }
-  return str;
-}
-
-
-const parseWebText = (webText) => {
-  // webText is a struct. We get it in binary as a BigInt. However, since the system
-  // is little endian, we cannot directly read and parse the BigInt as is. We need to
-  // have a littleEndian aware converter. like the one above
-  // webText struct -> { text: u32 (pointer), len: u32 }
-  // after conversion -> { text: last 4 bytes, len: first 1-4 bytes }
-  const bytes = bigToUint8Array(webText);
-  // these are the reverse order of the struct because of the endianness.
-  const start = bytes.length - 4;
-  const len = bytes.slice(0, start);
-  const text = bytes.slice(start, start+4);
-  return {text: u8ToNumber(text), len: u8ToNumber(len)};
-}
-
-const getString = (webText) => {
-  const str = parseWebText(webText);
-  const bytes = new Uint8Array(memory.buffer, str.text, str.len);
-  let s = ""
-  for (let i = 0; i < str.len ; i++) {
-    s += String.fromCharCode(bytes[i]);
-  }
-  return s;
-}
-
 const askitext = (text, len) => {
   const byte = new Uint8Array(memory.buffer, text, len);
   let s = ""
@@ -148,19 +9,7 @@ const askitext = (text, len) => {
 
 const console_log = (text, len) => {
   console.log('log:', askitext(text,len));
-  // console.log('zig2:', getString(value));
 };
-
-// const console_log = (value) => {
-//   const bytes = new Uint8Array(memory.buffer, value, 1024);
-//   let str = '';
-//   for (let i = 0; ; i++) {
-//     const c = String.fromCharCode(bytes[i]);
-//     if (c == '\0') break;
-//     str += c;
-//   }
-//   console.log('zig2:', str);
-// }
 
 const milliTimestamp = () => {
   return BigInt(Date.now());
@@ -214,6 +63,10 @@ const glGetUniformLocation = (programId, name, namelen) => {
 
 const glUniform1i = (uniform, v0) => {
   gl.uniform1i(glUniformLocations[uniform], v0);
+}
+
+const glUniform2i = (uniform, v0, v1) => {
+  gl.uniform2i(glUniformLocations[uniform], v0, v1);
 }
 
 const glUniform2f = (location, v0, v1) => {
@@ -311,12 +164,6 @@ const glGenTextures = (num, dataPtr) => {
   }
 }
 
-// const glTexImage2D = (target, level, internalFormat, width, height, border, format, type, dataPtr) => {
-//   let data;
-
-//   gl.texImage2D(target, level, internalFormat, width, height, border, format, type, data);
-// };
-
 const glTexParameteri = (target, pname, param) => {
   gl.texParameteri(target, pname, param);
 }
@@ -328,7 +175,7 @@ const glCreateShader = (type) => {
 }
 
 const glShaderSource = (shader, count, data, len) => {
-  if (count != 1) console.log("we only support count = 1 for glShaderSource");
+  if (count != 1) console.log("glShaderSource != 1");
   gl.shaderSource(glShaders[shader], askitext(data,len));
 }
 
@@ -351,7 +198,7 @@ const glLinkProgram = (program) => {
 }
 
 const glDeleteShader = (shader) => {
-  // eh who will delete and all
+  // TODO
 }
 
 const glCreateBuffer = () => {
@@ -385,7 +232,7 @@ const getTexData = (dataPtr, width, height, format, type) => {
     case 0x1907: components = 3; break;// GL_RGB
     case 0x1908: components = 4; break;// GL_RGBA
     default:
-      console.error(`Unsupported format: ${format}`);
+      console.error(`unsupported format: ${format}`);
   }
 
   const size = width * height *  components;
@@ -399,7 +246,7 @@ const getTexData = (dataPtr, width, height, format, type) => {
     case 0x140B: // GL_HALF_FLOAT_OES (WebGL 1)
       return new Uint16Array(memory.buffer, dataPtr, size);
     default:
-      console.error(`Unsupported type: ${type}`);
+      console.error(`unsupported type: ${type}`);
   }
 };
 
@@ -445,13 +292,7 @@ const glBindBufferBase = (target, index, buffer) => {
 };
 
 var api = {
-  // consoleLogS: consoleLog,
   console_log,
-  readWebFile,
-  readWebFileSize,
-  readStorageFileSize,
-  readStorageFile,
-  writeStorageFile,
   milliTimestamp,
   glClearColor,
   glClear,
@@ -462,6 +303,7 @@ var api = {
   glBlendFunc,
   glGetUniformLocation,
   glUniform1i,
+  glUniform2i,
   glUniform1iv,
   glUniform2f,
   glUniform3f,
@@ -480,7 +322,6 @@ var api = {
   glVertexAttribPointer,
   glEnableVertexAttribArray,
   glGenTextures,
-  // glTexImage2D,
   glTexParameteri,
   glCreateShader,
   glShaderSource,
