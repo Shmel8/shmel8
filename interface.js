@@ -65,6 +65,10 @@ const glUniform1i = (uniform, v0) => {
   gl.uniform1i(glUniformLocations[uniform], v0);
 }
 
+const glUniform1f = (uniform, v0) => {
+  gl.uniform1f(glUniformLocations[uniform], v0);
+}
+
 const glUniform2i = (uniform, v0, v1) => {
   gl.uniform2i(glUniformLocations[uniform], v0, v1);
 }
@@ -303,6 +307,7 @@ var api = {
   glBlendFunc,
   glGetUniformLocation,
   glUniform1i,
+  glUniform1f,
   glUniform2i,
   glUniform1iv,
   glUniform2f,
