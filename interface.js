@@ -144,6 +144,10 @@ const glDrawElements = (mode, count, type, offset) => {
   gl.drawElements(mode, count, type, offset);
 }
 
+const glDrawArraysInstanced = (mode, first, count, instanceCount) => {
+  gl.drawArraysInstanced(mode, first, count, instanceCount);
+}
+
 const glGenBuffers = (num, dataPtr) => {
   const buffers = new Uint32Array(memory.buffer, dataPtr, num);
   for (let n = 0; n < num; n++) {
@@ -155,6 +159,10 @@ const glGenBuffers = (num, dataPtr) => {
 const glVertexAttribPointer = (attribLocation, size, type, normalize, stride, offset) => {
   gl.vertexAttribPointer(attribLocation, size, type, normalize, stride, offset);
 }
+
+const glVertexAttribDivisor = (index, divisor) => {
+  gl.vertexAttribDivisor(index, divisor);
+};
 
 const glEnableVertexAttribArray = (x) => {
   gl.enableVertexAttribArray(x);
@@ -270,6 +278,7 @@ const glDrawArrays = (mode, first, count) => {
   gl.drawArrays(mode, first, count);
 };
 
+
 const glScissor = (x, y, width, height) => {
   gl.scissor(x, y, width, height);
 };
@@ -322,9 +331,11 @@ var api = {
   glBufferData,
   glDrawElements,
   glDrawArrays,
+  glDrawArraysInstanced,
   glGenBuffers,
   glGenVertexArrays,
   glVertexAttribPointer,
+  glVertexAttribDivisor,
   glEnableVertexAttribArray,
   glGenTextures,
   glTexParameteri,
