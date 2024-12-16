@@ -56,6 +56,10 @@ const glBlendFunc = (sfactor, dfactor) => {
   gl.blendFunc(sfactor, dfactor);
 }
 
+const glBlendFuncSeparate = (sfactor, dfactor, sfactorAlpha, dfactorAlpha) => {
+  gl.blendFuncSeparate(sfactor, dfactor, sfactorAlpha, dfactorAlpha);
+}
+
 const glGetUniformLocation = (programId, name, namelen) => {
   glUniformLocations.push(gl.getUniformLocation(glPrograms[programId], askitext(name, namelen)));
   return glUniformLocations.length - 1;
@@ -314,6 +318,7 @@ var api = {
   glViewport,
   glEnable,
   glBlendFunc,
+  glBlendFuncSeparate,
   glGetUniformLocation,
   glUniform1i,
   glUniform1f,
