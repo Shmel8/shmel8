@@ -308,7 +308,7 @@ const glBindBufferBase = (target, index, buffer) => {
   gl.bindBufferBase(target, index, glBuffers[buffer]);
 };
 
-var api = {
+var glapi = {
   console_log,
   milliTimestamp,
   glClearColor,
@@ -364,4 +364,20 @@ var api = {
   glGetUniformBlockIndex,
   glUniformBlockBinding,
   glBindBufferBase,
+}
+
+let gp = null;
+
+const setGP = (gamePushInstance) => {
+  gp = gamePushInstance;
+};
+
+const sendplayerlvl = (plvl) => {
+  gp.player.set('plvl', plvl);
+  gp.player.sync();
+}
+
+var gpapi = {
+  setGP,
+  sendplayerlvl,
 }
