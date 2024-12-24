@@ -4,22 +4,17 @@
 <head>
   <meta charset="UTF-8">
   <title>game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
  
 <body>
   <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0;"></canvas>
   <script src="interface.js"></script>
   <script>
-    let wasmInstance = null; 
-    let wasmReady = null;
-    const wasmPromise = new Promise((resolve) => {
-      wasmReady = resolve;
-    });
 
-    const env = { ...glapi, ...gpapi };
+    const env = { ...glapi };
 
     fetchAndInstantiate('main.wasm', { env }).then(instance => {
-      wasmInstance = instance;
       memory = instance.exports.memory;
       instance.exports.init();
       const wasm_update = instance.exports.update;
@@ -58,7 +53,6 @@
       }
       window.addEventListener("resize", resizeCanvas);
       resizeCanvas();
-      wasmReady();
 
       function render(timestamp) {
         wasm_update(timestamp);
@@ -73,28 +67,7 @@
         .then(bytes => WebAssembly.instantiate(bytes, importObject))
         .then(results => results.instance);
     }
-
-    window.onGPInit = async  function (gp) {
-      await wasmPromise;
-      gpapi.setGP(gp);
-      if (wasmInstance) {        
-        // wasmInstance.exports.onGamePushInit();
-        const langMapping = {
-          'ru': 0,
-          'en': 1,
-          'tr': 2
-        };
-
-        const selectedLang = langMapping[gp.language] ?? 1;
-        gp.player.on('ready', () => {
-          wasmInstance.exports.setlang(selectedLang);
-          const plvl = gp.player.get('plvl');
-          wasmInstance.exports.setplvl(plvl);
-        });
-      }
-    }
   </script>
-  <script async src="https://gamepush.com/sdk/gamepush.js?projectId=19266&publicToken=KY9oe5LIqCEipDoJD83uKqwoQyKGVgRT&callback=onGPInit"></script>
 </body>
 
 </html>
