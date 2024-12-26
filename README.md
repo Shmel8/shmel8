@@ -1,5 +1,8 @@
-## Hi there 👋
+https://shmel8.github.io/shmel8/ без внешних sdk
 
+читы:
+[e] - кормить
+[r] - реролл
 <!--
 **Shmel8/shmel8** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
