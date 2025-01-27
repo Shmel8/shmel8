@@ -15,7 +15,6 @@ const milliTimestamp = () => {
   return BigInt(Date.now());
 }
 
-// we choose to always init the webgl context.
 var canvas = document.getElementById("webgl_canvas");
 var gl = canvas.getContext("webgl2");
 
@@ -214,7 +213,7 @@ const glLinkProgram = (program) => {
 }
 
 const glDeleteShader = (shader) => {
-  // TODO
+  gl.deleteShader(glShaders[shader]);
 }
 
 const glCreateBuffer = () => {
@@ -367,17 +366,105 @@ var glapi = {
 }
 
 let gp = null;
+let wasmInstance = null;
+let gameHistory = [];
 
 const setGP = (gamePushInstance) => {
   gp = gamePushInstance;
-};
+}
 
-const sendplayerlvl = (plvl) => {
+const sendplvl = (plvl) => {
   gp.player.set('plvl', plvl);
+}
+
+const sendcoin = (coin) => {
+  gp.player.set('coin', coin);
   gp.player.sync();
+}
+
+const sendscore = (score) => {
+  gp.player.set('score', score);
+}
+
+const sendhelp = (help) => {
+  gp.player.set('help', help);
+}
+
+const showFullscreen = () => {
+  gp.ads.showFullscreen();
+}
+
+const showReward = () => {
+  gp.ads.showRewardedVideo();
+}
+
+const setWasmInstance = (instance) => {
+  wasmInstance = instance;
+}
+
+const parseHistory = (json) => {
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+const initializeHistory = async () => {
+  if (!gp || !wasmInstance) {
+    console.error('!null');
+    return;
+  }
+
+  const hist = await gp.player.get('hist');
+  gameHistory = parseHistory(hist);
+
+  for (const [icon, score] of gameHistory) {
+    wasmInstance.exports.sethist(icon, score);
+  }
+}
+
+const setPlayerHistory = (history) => {
+  if (gp) {
+    try {
+      gp.player.set('hist', JSON.stringify(history));
+    } catch (error) {
+      console.error(':(', error);
+    }
+  } 
+}
+
+const sendhist = (icon, score) => {
+  gameHistory.push([icon, score]);
+
+  if (gameHistory.length > 10) {
+    gameHistory.shift();
+  }
+
+  setPlayerHistory(gameHistory);
+}
+
+const showlidr = () => {
+  gp.leaderboard.open({
+    orderBy: ['score'],
+    displayFields: ['score', 'coin'],
+    order: 'DESC',
+    limit: 10,
+    withMe: 'first',
+    showNearest: 5,
+  });
 }
 
 var gpapi = {
   setGP,
-  sendplayerlvl,
+  setWasmInstance,
+  sendplvl,
+  sendcoin,
+  sendhelp,
+  sendhist,
+  sendscore,
+  showlidr,
+  showFullscreen,
+  showReward,
 }

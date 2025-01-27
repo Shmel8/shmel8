@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <title>game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 </head>
  
 <body>
-  <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0;"></canvas>
+  <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0; display: block; image-rendering: pixelated; -ms-interpolation-mode: nearest-neighbor; "></canvas>
   <script src="interface.js"></script>
   <script>
+    var dpr = 1;
 
     const env = { ...glapi };
 
     fetchAndInstantiate('main.wasm', { env }).then(instance => {
+      gpapi.setWasmInstance(instance);
       memory = instance.exports.memory;
       instance.exports.init();
       const wasm_update = instance.exports.update;
@@ -21,13 +24,31 @@
       document.addEventListener('keyup', e => instance.exports.keyboard(e.keyCode, 0));
       document.addEventListener('mousedown', e => instance.exports.mouse_key(e.button, 1));
       document.addEventListener('mouseup', e => instance.exports.mouse_key(e.button, 0));
-      document.addEventListener('mousemove', e => instance.exports.mouse_motion(e.x, e.y));
+      document.addEventListener('wheel', e => instance.exports.mouse_wheel(e.deltaY));
+      document.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
+        instance.exports.mouse_motion(x, y);
+      });
 
       canvas.addEventListener('touchstart', e => {
         const touch = e.touches[0];
         if (touch) {
           instance.exports.mouse_key(0, 1);
-          instance.exports.mouse_motion(touch.clientX, touch.clientY);
+          instance.exports.mouse_motion(touch.clientX * dpr, touch.clientY * dpr);
+        }
+        e.preventDefault();
+      });
+
+      canvas.addEventListener('touchmove', e => {
+        const touch = e.touches[0];
+        if (touch) {
+          instance.exports.mouse_motion(touch.clientX * dpr, touch.clientY * dpr);
         }
         e.preventDefault();
       });
@@ -37,24 +58,29 @@
         e.preventDefault();
       });
 
-      canvas.addEventListener('touchmove', e => {
-        const touch = e.touches[0];
-        if (touch) {
-          instance.exports.mouse_motion(touch.clientX, touch.clientY);
-        }
-        e.preventDefault();
-      });
-
       function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        instance.exports.resize(canvas.width, canvas.height);
+        const logicalWidth = window.innerWidth;
+        const logicalHeight = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 3, (window.screen.height * window.devicePixelRatio) / logicalHeight);
+
+        const d_width = Math.round(logicalWidth * dpr);
+        const d_height = Math.round(logicalHeight * dpr);
+        const needResize = canvas.width  != d_width || canvas.height != d_height;
+ 
+        if (needResize) {
+          canvas.width  = d_width;
+          canvas.height = d_height;
+          // instance.exports.resize(canvas.width, canvas.height);
+          instance.exports.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+        }
       }
       window.addEventListener("resize", resizeCanvas);
       window.addEventListener('orientationchange', resizeCanvas);
-      resizeCanvas();
+      resizeCanvas();// 
+      // wasmReady();
 
       function render(timestamp) {
+        // resizeCanvas();
         wasm_update(timestamp);
         window.requestAnimationFrame(render);
       }
@@ -67,6 +93,8 @@
         .then(bytes => WebAssembly.instantiate(bytes, importObject))
         .then(results => results.instance);
     }
+
+    
   </script>
 </body>
 
