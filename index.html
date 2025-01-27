@@ -16,7 +16,7 @@
     const env = { ...glapi };
 
     fetchAndInstantiate('main.wasm', { env }).then(instance => {
-      gpapi.setWasmInstance(instance);
+      // gpapi.setWasmInstance(instance);
       memory = instance.exports.memory;
       instance.exports.init();
       const wasm_update = instance.exports.update;
