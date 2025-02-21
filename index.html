@@ -12,11 +12,16 @@
   <script src="interface.js"></script>
   <script>
     var dpr = 1;
+    
+    let wasmReady = null;
+    const wasmPromise = new Promise((resolve) => {
+      wasmReady = resolve;
+    });
 
-    const env = { ...glapi };
+    const env = { ...glapi, ...gpapi };
 
     fetchAndInstantiate('main.wasm', { env }).then(instance => {
-      // gpapi.setWasmInstance(instance);
+      gpapi.setWasmInstance(instance);
       memory = instance.exports.memory;
       instance.exports.init();
       const wasm_update = instance.exports.update;
@@ -24,7 +29,6 @@
       document.addEventListener('keyup', e => instance.exports.keyboard(e.keyCode, 0));
       document.addEventListener('mousedown', e => instance.exports.mouse_key(e.button, 1));
       document.addEventListener('mouseup', e => instance.exports.mouse_key(e.button, 0));
-      document.addEventListener('wheel', e => instance.exports.mouse_wheel(e.deltaY));
       document.addEventListener('mousemove', e => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
@@ -77,7 +81,7 @@
       window.addEventListener("resize", resizeCanvas);
       window.addEventListener('orientationchange', resizeCanvas);
       resizeCanvas();// 
-      // wasmReady();
+      wasmReady();
 
       function render(timestamp) {
         // resizeCanvas();
@@ -94,8 +98,31 @@
         .then(results => results.instance);
     }
 
-    
+    window.onGPInit = async  function (gp) {
+      gpapi.setGP(gp);
+      if (!wasmInstance) {        
+        await wasmPromise;
+      }
+      const langMapping = {
+        'ru': 0,
+        'en': 1,
+        'tr': 2
+      };
+
+      const selectedLang = langMapping[gp.language] ?? 1;
+      gp.player.on('ready', () => {
+        wasmInstance.exports.setlang(selectedLang);
+        wasmInstance.exports.setplvl(gp.player.get('plvl'));
+        wasmInstance.exports.setcoin(gp.player.get('coin'));
+        wasmInstance.exports.sethelp(gp.player.get('help'));
+        initializeHistory();
+      });
+      gp.ads.on('rewarded:reward', () => {
+        wasmInstance.exports.sethelp(1);
+      });
+    }
   </script>
+  <script async src="https://gamepush.com/sdk/gamepush.js?projectId=19266&publicToken=KY9oe5LIqCEipDoJD83uKqwoQyKGVgRT&callback=onGPInit"></script>
 </body>
 
 </html>
