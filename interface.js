@@ -18,12 +18,13 @@ const milliTimestamp = () => {
 var canvas = document.getElementById("webgl_canvas");
 var gl = canvas.getContext("webgl2");
 
-const glShaders = [];
-const glPrograms = [];
-const glVertexArrays = [];
-const glBuffers = [];
-const glTextures = [];
-const glUniformLocations = [];
+const glShader = [null];
+const glProgram = [null];
+const glVertexArray = [null];
+const glBuffer = [null];
+const glFramebuffer = [null];
+const glTexture = [null];
+const glUniformLocation = [null];
 
 const glClearColor = (r,g,b,a) => {
   gl.clearColor(r, g, b, a);
@@ -33,14 +34,8 @@ const glClear = (mask) => {
   gl.clear(mask);
 } 
 
-const glBindFramebuffer = (target, framebuffer) => {
-  let fb = null;
-  if (framebuffer != 0) fb = framebuffer;
-  gl.bindFramebuffer(target, fb)
-}
-
 const glUseProgram = (program) => {
-  gl.useProgram(glPrograms[program]);
+  gl.useProgram(glProgram[program]);
 }
 
 const glViewport = (x, y, width, height) => {
@@ -59,52 +54,57 @@ const glBlendFuncSeparate = (sfactor, dfactor, sfactorAlpha, dfactorAlpha) => {
   gl.blendFuncSeparate(sfactor, dfactor, sfactorAlpha, dfactorAlpha);
 }
 
+const glBlendEquation = (mode) => {
+  gl.blendEquation(mode);
+}
+
+
 const glGetUniformLocation = (programId, name, namelen) => {
-  glUniformLocations.push(gl.getUniformLocation(glPrograms[programId], askitext(name, namelen)));
-  return glUniformLocations.length - 1;
+  glUniformLocation.push(gl.getUniformLocation(glProgram[programId], askitext(name, namelen)));
+  return glUniformLocation.length - 1;
 };
 
 const glUniform1i = (uniform, v0) => {
-  gl.uniform1i(glUniformLocations[uniform], v0);
+  gl.uniform1i(glUniformLocation[uniform], v0);
 }
 
 const glUniform1f = (uniform, v0) => {
-  gl.uniform1f(glUniformLocations[uniform], v0);
+  gl.uniform1f(glUniformLocation[uniform], v0);
 }
 
 const glUniform2i = (uniform, v0, v1) => {
-  gl.uniform2i(glUniformLocations[uniform], v0, v1);
+  gl.uniform2i(glUniformLocation[uniform], v0, v1);
 }
 
 const glUniform2f = (location, v0, v1) => {
-  gl.uniform2f(glUniformLocations[location], v0, v1);
+  gl.uniform2f(glUniformLocation[location], v0, v1);
 };
 
 const glUniform3f = (location, v0, v1, v2) => {
-  gl.uniform3f(glUniformLocations[location], v0, v1, v2);
+  gl.uniform3f(glUniformLocation[location], v0, v1, v2);
 };
 
 const glUniform4f = (location, v0, v1, v2, v3) => {
-  gl.uniform4f(glUniformLocations[location], v0, v1, v2, v3);
+  gl.uniform4f(glUniformLocation[location], v0, v1, v2, v3);
 };
 
 const glUniform4i = (location, v0, v1, v2, v3) => {
-  gl.uniform4i(glUniformLocations[location], v0, v1, v2, v3);
+  gl.uniform4i(glUniformLocation[location], v0, v1, v2, v3);
 };
 
 const glUniform1iv = (location, count, value) => {
   const data = new Uint32Array(memory.buffer, value, count);
-  gl.uniform1iv(glUniformLocations[location], data);
+  gl.uniform1iv(glUniformLocation[location], data);
 };
 
 const glUniform3fv = (location, count, value) => {
   const data = new Float32Array(memory.buffer, value, count);
-  gl.uniform3fv(glUniformLocations[location], data);
+  gl.uniform3fv(glUniformLocation[location], data);
 };
 
 const glCreateVertexArray = () => {
-  glVertexArrays.push(gl.createVertexArray());
-  return glVertexArrays.length - 1;
+  glVertexArray.push(gl.createVertexArray());
+  return glVertexArray.length - 1;
 };
 
 const glGenVertexArrays = (num, dataPtr) => {
@@ -120,11 +120,11 @@ const glActiveTexture = (texture) => {
 }
 
 const glBindVertexArray = (va) => {
-  gl.bindVertexArray(glVertexArrays[va]);
+  gl.bindVertexArray(glVertexArray[va]);
 }
 
 const glBindBuffer = (target, buffer) => {
-  gl.bindBuffer(target, glBuffers[buffer]);
+  gl.bindBuffer(target, glBuffer[buffer]);
 }
 
 const glBufferData = (target, size, data, usage) => {
@@ -151,12 +151,34 @@ const glDrawArraysInstanced = (mode, first, count, instanceCount) => {
   gl.drawArraysInstanced(mode, first, count, instanceCount);
 }
 
+// const glCreateBuffer = () => {
+//   glBuffer.push(gl.createBuffer());
+//   return glBuffer.length - 1;
+// }
+
 const glGenBuffers = (num, dataPtr) => {
-  const buffers = new Uint32Array(memory.buffer, dataPtr, num);
+  const z_mem = new Uint32Array(memory.buffer, dataPtr, num);
   for (let n = 0; n < num; n++) {
-    const b = glCreateBuffer();
-    buffers[n] = b;
+    z_mem[n] = glBuffer.length;
+    glBuffer.push(gl.createBuffer());
   }
+}
+
+const glGenFramebuffers = (num, dataPtr) => {
+  const z_mem = new Uint32Array(memory.buffer, dataPtr, num);
+  for (let n = 0; n < num; n++) {
+    z_mem[n] = glFramebuffer.length;
+    glFramebuffer.push(gl.createFramebuffer());
+  }
+}
+
+const glBindFramebuffer = (target, fb) => {
+  gl.bindFramebuffer(target, glFramebuffer[fb])
+}
+
+const glFramebufferTexture2D = (target, attachment, textarget, textureId, level) => {
+  const texture = glTexture[textureId];
+  gl.framebufferTexture2D(target, attachment, textarget, texture, level);
 }
 
 const glVertexAttribPointer = (attribLocation, size, type, normalize, stride, offset) => {
@@ -172,10 +194,10 @@ const glEnableVertexAttribArray = (x) => {
 }
 
 const glGenTextures = (num, dataPtr) => {
-  const textures = new Uint32Array(memory.buffer, dataPtr, num);
+  const z_mem = new Uint32Array(memory.buffer, dataPtr, num);
   for (let n = 0; n < num; n++) {
-    const b = glCreateTexture();
-    textures[n] = b;
+    z_mem[n] = glTexture.length;
+    glTexture.push(gl.createTexture());
   }
 }
 
@@ -185,49 +207,41 @@ const glTexParameteri = (target, pname, param) => {
 
 const glCreateShader = (type) => {
   let shader = gl.createShader(type);
-  glShaders.push(shader);
-  return glShaders.length - 1;
+  glShader.push(shader);
+  return glShader.length - 1;
 }
 
 const glShaderSource = (shader, count, data, len) => {
   if (count != 1) console.log("glShaderSource != 1");
-  gl.shaderSource(glShaders[shader], askitext(data,len));
+  gl.shaderSource(glShader[shader], askitext(data,len));
 }
 
 const glCompileShader = (shader) => {
-  gl.compileShader(glShaders[shader]);
+  gl.compileShader(glShader[shader]);
 }
 
 const glCreateProgram = () => {
   let program = gl.createProgram();
-  glPrograms.push(program);
-  return glPrograms.length - 1;
+  glProgram.push(program);
+  return glProgram.length - 1;
 }
 
 const glAttachShader = (program, shader) => {
-  gl.attachShader(glPrograms[program], glShaders[shader]);
+  gl.attachShader(glProgram[program], glShader[shader]);
 }
 
 const glLinkProgram = (program) => {
-  gl.linkProgram(glPrograms[program]);
+  gl.linkProgram(glProgram[program]);
 }
 
 const glDeleteShader = (shader) => {
-  gl.deleteShader(glShaders[shader]);
+  gl.deleteShader(glShader[shader]);
 }
 
-const glCreateBuffer = () => {
-  glBuffers.push(gl.createBuffer());
-  return glBuffers.length - 1;
-}
 
-const glCreateTexture = () => {
-  glTextures.push(gl.createTexture());
-  return glTextures.length - 1;
-};
 
 const glBindTexture = (target, textureId) => {
-  gl.bindTexture(target, glTextures[textureId]);
+  gl.bindTexture(target, glTexture[textureId]);
 }
 
 const glTexStorage2D = (target, levels, internalformat, width, height) => {
@@ -296,15 +310,15 @@ const glVertexAttribIPointer = (index, size, type, stride, pointer) => {
 
 
 const glGetUniformBlockIndex = (program, uniformBlockName, namelen) => {
-  return gl.getUniformBlockIndex(glPrograms[program], askitext(uniformBlockName, namelen));
+  return gl.getUniformBlockIndex(glProgram[program], askitext(uniformBlockName, namelen));
 };
 
 const glUniformBlockBinding = (program, uniformBlockIndex, uniformBlockBinding) => {
-  gl.uniformBlockBinding(glPrograms[program], uniformBlockIndex, uniformBlockBinding);
+  gl.uniformBlockBinding(glProgram[program], uniformBlockIndex, uniformBlockBinding);
 };
 
 const glBindBufferBase = (target, index, buffer) => {
-  gl.bindBufferBase(target, index, glBuffers[buffer]);
+  gl.bindBufferBase(target, index, glBuffer[buffer]);
 };
 
 var glapi = {
@@ -312,11 +326,11 @@ var glapi = {
   milliTimestamp,
   glClearColor,
   glClear,
-  glBindFramebuffer,
   glUseProgram,
   glViewport,
   glEnable,
   glBlendFunc,
+  glBlendEquation,
   glBlendFuncSeparate,
   glGetUniformLocation,
   glUniform1i,
@@ -337,6 +351,9 @@ var glapi = {
   glDrawArrays,
   glDrawArraysInstanced,
   glGenBuffers,
+  glGenFramebuffers,
+  glBindFramebuffer,
+  glFramebufferTexture2D,
   glGenVertexArrays,
   glVertexAttribPointer,
   glVertexAttribDivisor,
@@ -351,8 +368,6 @@ var glapi = {
   glLinkProgram,
   glDeleteShader,
   glCreateVertexArray,
-  glCreateBuffer,
-  glCreateTexture,
   glTexSubImage2D,
   glScissor,
   glDisable,
