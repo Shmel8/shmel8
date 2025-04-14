@@ -11,85 +11,31 @@
   <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0; display: block; image-rendering: pixelated; -ms-interpolation-mode: nearest-neighbor; "></canvas>
   <script src="interface.js"></script>
   <script>
-    var dpr = 1;
-    
+    let dpr = 1;
     let wasmReady = null;
-    const wasmPromise = new Promise((resolve) => {
-      wasmReady = resolve;
-    });
+    const wasmPromise = new Promise(resolve => { wasmReady = resolve; });
+    // const env = { ...glapi, ...yagapi };
+    const env = { ...glapi };
 
-    const env = { ...glapi, ...gpapi };
-
-    fetchAndInstantiate('main.wasm', { env }).then(instance => {
-      gpapi.setWasmInstance(instance);
-      memory = instance.exports.memory;
-      instance.exports.init();
-      const wasm_update = instance.exports.update;
-      document.addEventListener('keydown', e => instance.exports.keyboard(e.keyCode, 1));
-      document.addEventListener('keyup', e => instance.exports.keyboard(e.keyCode, 0));
-      document.addEventListener('mousedown', e => instance.exports.mouse_key(e.button, 1));
-      document.addEventListener('mouseup', e => instance.exports.mouse_key(e.button, 0));
-      document.addEventListener('mousemove', e => {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
-
-        instance.exports.mouse_motion(x, y);
-      });
-
-      canvas.addEventListener('touchstart', e => {
-        const touch = e.touches[0];
-        if (touch) {
-          instance.exports.mouse_key(0, 1);
-          instance.exports.mouse_motion(touch.clientX * dpr, touch.clientY * dpr);
-        }
-        e.preventDefault();
-      });
-
-      canvas.addEventListener('touchmove', e => {
-        const touch = e.touches[0];
-        if (touch) {
-          instance.exports.mouse_motion(touch.clientX * dpr, touch.clientY * dpr);
-        }
-        e.preventDefault();
-      });
-
-      canvas.addEventListener('touchend', e => {
-        instance.exports.mouse_key(0, 0);
-        e.preventDefault();
-      });
-
-      function resizeCanvas() {
-        const logicalWidth = window.innerWidth;
-        const logicalHeight = window.innerHeight;
-        dpr = Math.min(window.devicePixelRatio || 1, 3, (window.screen.height * window.devicePixelRatio) / logicalHeight);
-
-        const d_width = Math.round(logicalWidth * dpr);
-        const d_height = Math.round(logicalHeight * dpr);
-        const needResize = canvas.width  != d_width || canvas.height != d_height;
- 
-        if (needResize) {
-          canvas.width  = d_width;
-          canvas.height = d_height;
-          // instance.exports.resize(canvas.width, canvas.height);
-          instance.exports.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
-        }
-      }
-      window.addEventListener("resize", resizeCanvas);
-      window.addEventListener('orientationchange', resizeCanvas);
-      resizeCanvas();// 
-      wasmReady();
-
-      function render(timestamp) {
-        // resizeCanvas();
-        wasm_update(timestamp);
-        window.requestAnimationFrame(render);
-      }
-      window.requestAnimationFrame(render);
-    });
+    // YaGames.init().then(ysdk => {
+    //   window.ysdk = ysdk;
+    //   yagapi.setYaGames(ysdk);
+    //   ysdk.adv.showFullscreenAdv({
+    //     callbacks: {
+    //       onClose: function (wasShown) {
+    //         ysdk.features.GameplayAPI?.start();
+    //       },
+    //       onError: () => {}
+    //     }
+    //   });
+    //   wasmPromise.then(() => {
+    //     ysdk.features.LoadingAPI?.ready();
+    //     ysdk.features.GameplayAPI?.start();
+    //     ysdk.getPlayer({ scopes: false }).then(player => {
+    //       yagapi.setPlayer(player);
+    //     });
+    //   });
+    // });
 
     function fetchAndInstantiate(url, importObject) {
       return fetch(url)
@@ -98,31 +44,67 @@
         .then(results => results.instance);
     }
 
-    window.onGPInit = async  function (gp) {
-      gpapi.setGP(gp);
-      if (!wasmInstance) {        
-        await wasmPromise;
-      }
-      const langMapping = {
-        'ru': 0,
-        'en': 1,
-        'tr': 2
-      };
+    fetchAndInstantiate('main.wasm', { env }).then(instance => {
+      wasmInstance = instance;
+      memory = instance.exports.memory;
+      instance.exports.init(Date.now());
 
-      const selectedLang = langMapping[gp.language] ?? 1;
-      gp.player.on('ready', () => {
-        wasmInstance.exports.setlang(selectedLang);
-        wasmInstance.exports.setplvl(gp.player.get('plvl'));
-        wasmInstance.exports.setcoin(gp.player.get('coin'));
-        wasmInstance.exports.sethelp(gp.player.get('help'));
-        initializeHistory();
-      });
-      gp.ads.on('rewarded:reward', () => {
-        wasmInstance.exports.sethelp(1);
-      });
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('keydown', e => instance.exports.keyboard(e.keyCode, 1));
+      document.addEventListener('keyup', e => instance.exports.keyboard(e.keyCode, 0));
+      document.addEventListener('mousedown', e => instance.exports.mouse_key(e.button, 1));
+      document.addEventListener('mouseup', e => instance.exports.mouse_key(e.button, 0));
+      document.addEventListener('mousemove', e => trackMouse(instance, e));
+      canvas.addEventListener('touchstart', e => handleTouch(instance, e, true));
+      canvas.addEventListener('touchmove', e => handleTouch(instance, e, false));
+      canvas.addEventListener('touchend', e => instance.exports.mouse_key(0, 0));
+      window.addEventListener("resize", resizeCanvas);
+      window.addEventListener('orientationchange', resizeCanvas);
+
+      resizeCanvas();
+
+      wasmReady();
+      function render(timestamp) {
+        instance.exports.update(timestamp);
+        window.requestAnimationFrame(render);
+      }
+      window.requestAnimationFrame(render);
+    });
+
+    function trackMouse(instance, e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      instance.exports.mouse_motion(x, y);
+    }
+
+    function handleTouch(instance, e, isStart) {
+      const touch = e.touches[0];
+      if (touch) {
+        if (isStart) {
+          instance.exports.mouse_key(0, 1);
+        }
+        instance.exports.mouse_motion(touch.clientX * dpr, touch.clientY * dpr);
+      }
+      e.preventDefault();
+    }
+
+    function resizeCanvas() {
+      const logicalWidth = window.innerWidth;
+      const logicalHeight = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 3, (window.screen.height * window.devicePixelRatio) / logicalHeight);
+
+      const d_width = Math.round(logicalWidth * dpr);
+      const d_height = Math.round(logicalHeight * dpr);
+      if (canvas.width !== d_width || canvas.height !== d_height) {
+        canvas.width = d_width;
+        canvas.height = d_height;
+        wasmInstance.exports.resize(canvas.width, canvas.height);
+      }
     }
   </script>
-  <script async src="https://gamepush.com/sdk/gamepush.js?projectId=19266&publicToken=KY9oe5LIqCEipDoJD83uKqwoQyKGVgRT&callback=onGPInit"></script>
 </body>
 
 </html>
