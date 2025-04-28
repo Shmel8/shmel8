@@ -8,34 +8,14 @@
 </head>
  
 <body>
-  <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0; display: block; image-rendering: pixelated; -ms-interpolation-mode: nearest-neighbor; "></canvas>
+  <canvas id="webgl_canvas" style="position:absolute; width:100%; height:100%; left: 0; top: 0; display: block; image-rendering: pixelated; -ms-interpolation-mode: nearest-neighbor; touch-action: none;"></canvas>
   <script src="interface.js"></script>
   <script>
     let dpr = 1;
     let wasmReady = null;
     const wasmPromise = new Promise(resolve => { wasmReady = resolve; });
-    // const env = { ...glapi, ...yagapi };
+    
     const env = { ...glapi };
-
-    // YaGames.init().then(ysdk => {
-    //   window.ysdk = ysdk;
-    //   yagapi.setYaGames(ysdk);
-    //   ysdk.adv.showFullscreenAdv({
-    //     callbacks: {
-    //       onClose: function (wasShown) {
-    //         ysdk.features.GameplayAPI?.start();
-    //       },
-    //       onError: () => {}
-    //     }
-    //   });
-    //   wasmPromise.then(() => {
-    //     ysdk.features.LoadingAPI?.ready();
-    //     ysdk.features.GameplayAPI?.start();
-    //     ysdk.getPlayer({ scopes: false }).then(player => {
-    //       yagapi.setPlayer(player);
-    //     });
-    //   });
-    // });
 
     function fetchAndInstantiate(url, importObject) {
       return fetch(url)
@@ -48,6 +28,7 @@
       wasmInstance = instance;
       memory = instance.exports.memory;
       instance.exports.init(Date.now());
+      wasmReady();
 
       document.addEventListener('contextmenu', e => e.preventDefault());
       document.addEventListener('keydown', e => instance.exports.keyboard(e.keyCode, 1));
@@ -59,11 +40,9 @@
       canvas.addEventListener('touchmove', e => handleTouch(instance, e, false));
       canvas.addEventListener('touchend', e => instance.exports.mouse_key(0, 0));
       window.addEventListener("resize", resizeCanvas);
-      window.addEventListener('orientationchange', resizeCanvas);
+      window.addEventListener('orientationchange', () => { setTimeout(resizeCanvas, 100); });
 
       resizeCanvas();
-
-      wasmReady();
       function render(timestamp) {
         instance.exports.update(timestamp);
         window.requestAnimationFrame(render);
@@ -77,34 +56,34 @@
       const scaleY = canvas.height / rect.height;
       const x = (e.clientX - rect.left) * scaleX;
       const y = (e.clientY - rect.top) * scaleY;
+
       instance.exports.mouse_motion(x, y);
     }
 
     function handleTouch(instance, e, isStart) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
       const touch = e.touches[0];
       if (touch) {
-        if (isStart) {
-          instance.exports.mouse_key(0, 1);
-        }
-        instance.exports.mouse_motion(touch.clientX * dpr, touch.clientY * dpr);
+        const x = (touch.clientX - rect.left) * scaleX;
+        const y = (touch.clientY - rect.top) * scaleY;
+        if (isStart) { instance.exports.mouse_key(0, 1); }
+
+        instance.exports.mouse_motion(x, y);
       }
       e.preventDefault();
     }
 
     function resizeCanvas() {
-      const logicalWidth = window.innerWidth;
-      const logicalHeight = window.innerHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, 3, (window.screen.height * window.devicePixelRatio) / logicalHeight);
-
-      const d_width = Math.round(logicalWidth * dpr);
-      const d_height = Math.round(logicalHeight * dpr);
-      if (canvas.width !== d_width || canvas.height !== d_height) {
-        canvas.width = d_width;
-        canvas.height = d_height;
-        wasmInstance.exports.resize(canvas.width, canvas.height);
-      }
+      const rect = canvas.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+  
+      wasmInstance.exports.resize(canvas.width, canvas.height);
     }
   </script>
 </body>
-
 </html>

@@ -15,8 +15,10 @@ const milliTimestamp = () => {
   return BigInt(Date.now());
 }
 
-var canvas = document.getElementById("webgl_canvas");
-var gl = canvas.getContext("webgl2");
+const canvas = document.getElementById("webgl_canvas");
+const gl = canvas.getContext("webgl2");
+let wasmInstance = null;
+let memory = null;
 
 const glShader = [null];
 const glProgram = [null];
@@ -57,7 +59,6 @@ const glBlendFuncSeparate = (sfactor, dfactor, sfactorAlpha, dfactorAlpha) => {
 const glBlendEquation = (mode) => {
   gl.blendEquation(mode);
 }
-
 
 const glGetUniformLocation = (programId, name, namelen) => {
   glUniformLocation.push(gl.getUniformLocation(glProgram[programId], askitext(name, namelen)));
@@ -150,11 +151,6 @@ const glDrawElements = (mode, count, type, offset) => {
 const glDrawArraysInstanced = (mode, first, count, instanceCount) => {
   gl.drawArraysInstanced(mode, first, count, instanceCount);
 }
-
-// const glCreateBuffer = () => {
-//   glBuffer.push(gl.createBuffer());
-//   return glBuffer.length - 1;
-// }
 
 const glGenBuffers = (num, dataPtr) => {
   const z_mem = new Uint32Array(memory.buffer, dataPtr, num);
@@ -378,108 +374,4 @@ var glapi = {
   glGetUniformBlockIndex,
   glUniformBlockBinding,
   glBindBufferBase,
-}
-
-let gp = null;
-let wasmInstance = null;
-let gameHistory = [];
-
-const setGP = (gamePushInstance) => {
-  gp = gamePushInstance;
-}
-
-const sendplvl = (plvl) => {
-  gp.player.set('plvl', plvl);
-}
-
-const sendcoin = (coin) => {
-  gp.player.set('coin', coin);
-  gp.player.sync();
-}
-
-const sendscore = (score) => {
-  gp.player.set('score', score);
-}
-
-const sendhelp = (help) => {
-  gp.player.set('help', help);
-}
-
-const showFullscreen = () => {
-  gp.ads.showFullscreen();
-}
-
-const showReward = () => {
-  gp.ads.showRewardedVideo();
-}
-
-const setWasmInstance = (instance) => {
-  wasmInstance = instance;
-}
-
-const parseHistory = (json) => {
-  try {
-    const parsed = JSON.parse(json);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-const initializeHistory = async () => {
-  if (!gp || !wasmInstance) {
-    console.error('!null');
-    return;
-  }
-
-  const hist = await gp.player.get('hist');
-  gameHistory = parseHistory(hist);
-
-  for (const [icon, score] of gameHistory) {
-    wasmInstance.exports.sethist(icon, score);
-  }
-}
-
-const setPlayerHistory = (history) => {
-  if (gp) {
-    try {
-      gp.player.set('hist', JSON.stringify(history));
-    } catch (error) {
-      console.error(':(', error);
-    }
-  } 
-}
-
-const sendhist = (icon, score) => {
-  gameHistory.push([icon, score]);
-
-  if (gameHistory.length > 10) {
-    gameHistory.shift();
-  }
-
-  setPlayerHistory(gameHistory);
-}
-
-const showlidr = () => {
-  gp.leaderboard.open({
-    orderBy: ['score'],
-    displayFields: ['score', 'coin'],
-    order: 'DESC',
-    limit: 10,
-    withMe: 'first',
-    showNearest: 5,
-  });
-}
-
-var gpapi = {
-  setGP,
-  setWasmInstance,
-  sendplvl,
-  sendcoin,
-  sendhelp,
-  sendhist,
-  sendscore,
-  showlidr,
-  showFullscreen,
-  showReward,
 }
