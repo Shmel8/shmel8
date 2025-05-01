@@ -26,6 +26,7 @@ const glVertexArray = [null];
 const glBuffer = [null];
 const glFramebuffer = [null];
 const glTexture = [null];
+const glSampler = [null];
 const glUniformLocation = [null];
 
 const glClearColor = (r,g,b,a) => {
@@ -103,16 +104,11 @@ const glUniform3fv = (location, count, value) => {
   gl.uniform3fv(glUniformLocation[location], data);
 };
 
-const glCreateVertexArray = () => {
-  glVertexArray.push(gl.createVertexArray());
-  return glVertexArray.length - 1;
-};
-
 const glGenVertexArrays = (num, dataPtr) => {
-  const vaos = new Uint32Array(memory.buffer, dataPtr, num);
+  const z_mem = new Uint32Array(memory.buffer, dataPtr, num);
   for (let n = 0; n < num; n++) {
-    const b = glCreateVertexArray();
-    vaos[n] = b;
+    z_mem[n] = glVertexArray.length;
+    glVertexArray.push(gl.createVertexArray());
   }
 }
 
@@ -197,8 +193,20 @@ const glGenTextures = (num, dataPtr) => {
   }
 }
 
-const glTexParameteri = (target, pname, param) => {
-  gl.texParameteri(target, pname, param);
+const glGenSamplers = (num, dataPtr) => {
+  const z_mem = new Uint32Array(memory.buffer, dataPtr, num);
+  for (let n = 0; n < num; n++) {
+    z_mem[n] = glSampler.length;
+    glSampler.push(gl.createSampler());
+  }
+}
+
+const glBindSampler = (unit, sampler) => {
+  gl.bindSampler(unit, glSampler[sampler]);
+}
+
+const glSamplerParameteri = (sampler, pname, param) => {
+  gl.samplerParameteri(glSampler[sampler], pname, param);
 }
 
 const glCreateShader = (type) => {
@@ -233,8 +241,6 @@ const glLinkProgram = (program) => {
 const glDeleteShader = (shader) => {
   gl.deleteShader(glShader[shader]);
 }
-
-
 
 const glBindTexture = (target, textureId) => {
   gl.bindTexture(target, glTexture[textureId]);
@@ -355,7 +361,7 @@ var glapi = {
   glVertexAttribDivisor,
   glEnableVertexAttribArray,
   glGenTextures,
-  glTexParameteri,
+  glGenSamplers,
   glCreateShader,
   glShaderSource,
   glCompileShader,
@@ -363,7 +369,6 @@ var glapi = {
   glAttachShader,
   glLinkProgram,
   glDeleteShader,
-  glCreateVertexArray,
   glTexSubImage2D,
   glScissor,
   glDisable,
@@ -374,4 +379,6 @@ var glapi = {
   glGetUniformBlockIndex,
   glUniformBlockBinding,
   glBindBufferBase,
+  glBindSampler,
+  glSamplerParameteri,
 }
