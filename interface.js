@@ -7,7 +7,7 @@ const askitext = (text, len) => {
   return s;
 }
 
-const console_log = (text, len) => {
+const web_log = (text, len) => {
   console.log('log:', askitext(text,len));
 };
 
@@ -125,20 +125,14 @@ const glBindBuffer = (target, buffer) => {
 }
 
 const glBufferData = (target, size, data, usage) => {
-    size = Number(size);
-  if (target == 34962) { // GL_ARRAY_BUFFER
-    const buffer = new Float32Array(memory.buffer, data, size);
-    gl.bufferData(target, buffer, usage);
-  } else if (target == 0x8893 ) { // GL_ELEMENT_ARRAY_BUFFER
-    const buffer = new Uint32Array(memory.buffer, data, size);
-    gl.bufferData(target, buffer, usage);
-  } else if (target === 0x8A11) { // GL_UNIFORM_BUFFER
-    const buffer = new Uint8Array(memory.buffer, data, size);
-    gl.bufferData(target, buffer, usage);
-  } else {
-    console.log("! buff:", target);
-  }
+  const buffer = new Uint8Array(memory.buffer, data, Number(size));
+  gl.bufferData(target, buffer, usage);
 }
+
+const glBufferSubData = (target, offset, size, data) => {
+  const buffer = new Uint8Array(memory.buffer, Number(data), Number(size));
+  gl.bufferSubData(target, Number(offset), buffer);
+};
 
 const glDrawElements = (mode, count, type, offset) => {
   gl.drawElements(mode, count, type, offset);
@@ -324,7 +318,7 @@ const glBindBufferBase = (target, index, buffer) => {
 };
 
 var glapi = {
-  console_log,
+  web_log,
   milliTimestamp,
   glClearColor,
   glClear,
@@ -349,6 +343,7 @@ var glapi = {
   glBindVertexArray,
   glBindBuffer,
   glBufferData,
+  glBufferSubData,
   glDrawElements,
   glDrawArrays,
   glDrawArraysInstanced,
