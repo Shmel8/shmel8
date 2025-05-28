@@ -253,6 +253,7 @@ const getTexData = (dataPtr, width, height, format, type) => {
 
   switch (format) {
     case 0x1903: components = 1; break;// GL_RED
+    case 36244: components = 1; break; // red integer
     case 0x8227: components = 2; break;// GL_RG
     case 0x1907: components = 3; break;// GL_RGB
     case 0x1908: components = 4; break;// GL_RGBA
