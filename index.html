@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGL Игра</title>
+    <title>snake</title>
     <style>
         * {
             margin: 0;
@@ -49,7 +49,6 @@
             color: #fff;
         }
         
-        /* Скрываем кнопку в полноэкранном режиме */
         :fullscreen #fullscreen-btn {
             display: none;
         }
@@ -72,8 +71,7 @@
         <iframe 
             id="game-frame"
             src="game.html" 
-            allow="fullscreen"
-            title="WebGL Game">
+            allow="fullscreen" >
         </iframe>
         <button id="fullscreen-btn">На весь экран</button>
     </div>
@@ -91,20 +89,6 @@
                 gameContainer.webkitRequestFullscreen();
             } else if (gameContainer.msRequestFullscreen) {
                 gameContainer.msRequestFullscreen();
-            }
-        }
-        
-        // Обработчик выхода из полноэкранного режима
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('msfullscreenchange', handleFullscreenChange);
-        
-        function handleFullscreenChange() {
-            // При выходе из полноэкранного режима показываем кнопку снова
-            if (!document.fullscreenElement &&
-                !document.webkitFullscreenElement &&
-                !document.msFullscreenElement) {
-                fullscreenBtn.style.display = 'block';
             }
         }
     </script>
