@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      position: fixed;
+      overscroll-behavior: none;
+    }
+    
+    #webgl_canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: crisp-edges;
+      -ms-interpolation-mode: nearest-neighbor;
+      transform: translateZ(0);
+      touch-action: none;
+    }
+  </style>
+</head>
+ 
+<body>
+  <canvas id="webgl_canvas"></canvas>
+  <script src="interface.js"></script>
+  <script>
+    let dpr = 1;
+    let wasmReady = null;
+    const wasmPromise = new Promise(resolve => { wasmReady = resolve; });
+    const env = { ...glapi };
+
+    function trackMouse(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      
+      wasmInstance.exports.mouse_motion(x, y);
+    }
+    
+    function handleTouch(e, isStart) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const x = (touch.clientX - rect.left) * scaleX;
+        const y = (touch.clientY - rect.top) * scaleY;
+        
+        if (isStart) {
+          wasmInstance.exports.mouse_key(0, 1);
+        }
+        
+        wasmInstance.exports.mouse_motion(x, y);
+      }
+      
+      e.preventDefault();
+    }
+
+    let resizeTimeout;
+    function handleResize() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resizeCanvas, 200);
+    }
+    
+    function handleOrientationChange() {
+      setTimeout(resizeCanvas, 300);
+    }
+    
+    function resizeCanvas() {
+      const visualViewport = window.visualViewport || window;
+      const visualWidth = visualViewport.width * (visualViewport.scale || 1);
+      const visualHeight = visualViewport.height * (visualViewport.scale || 1);
+      
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
+      
+      canvas.width = Math.round(visualWidth * dpr);
+      canvas.height = Math.round(visualHeight * dpr);
+      
+      wasmInstance.exports.resize(canvas.width, canvas.height);
+    }
+
+    function render(timestamp) {
+      wasmInstance.exports.update(timestamp);
+      window.requestAnimationFrame(render);
+    }
+    
+    async function init() {
+      wasmInstance = await fetch('main.wasm')
+        .then(response => response.arrayBuffer())
+        .then(bytes => WebAssembly.instantiate(bytes, { env }))
+        .then(results => results.instance);
+      memory = wasmInstance.exports.memory;
+      
+      wasmInstance.exports.init(Date.now());
+      wasmReady();
+
+      document.addEventListener('contextmenu', e => e.preventDefault());
+      document.addEventListener('keydown', e => wasmInstance.exports.keyboard(e.keyCode, 1));
+      document.addEventListener('keyup', e => wasmInstance.exports.keyboard(e.keyCode, 0));
+      document.addEventListener('mousedown', e => wasmInstance.exports.mouse_key(e.button, 1));
+      document.addEventListener('mouseup', e => wasmInstance.exports.mouse_key(e.button, 0));
+      document.addEventListener('mousemove', e => trackMouse(e));
+      canvas.addEventListener('touchstart', e => handleTouch(e, true));
+      canvas.addEventListener('touchmove', e => handleTouch(e, false));
+      canvas.addEventListener('touchend', e => { wasmInstance.exports.mouse_key(0, 0); });
+      
+      window.addEventListener("resize", handleResize);
+      window.addEventListener('orientationchange', handleOrientationChange);
+      
+      resizeCanvas();
+      
+      window.requestAnimationFrame(render);
+    }
+
+    init();
+  </script>
+</body>
+</html>
