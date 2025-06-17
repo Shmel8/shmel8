@@ -128,6 +128,9 @@
       window.addEventListener('orientationchange', handleOrientationChange);
       
       resizeCanvas();
+      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        wasmInstance.exports.mobice();
+      }
       
       window.requestAnimationFrame(render);
     }
