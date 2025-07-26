@@ -15,8 +15,14 @@ const milliTimestamp = () => {
   return BigInt(Date.now());
 }
 
-const canvas = document.getElementById("webgl_canvas");
-const gl = canvas.getContext("webgl2");
+const canvas = document.getElementById("gl_1236");
+const gl = canvas.getContext("webgl2", {
+  antialias: false,
+  depth: false,
+  stencil: false,
+  alpha: false,
+  powerPreference: "high-performance"
+});
 let wasmInstance = null;
 let memory = null;
 

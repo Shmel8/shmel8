@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <head>
   <meta charset="UTF-8">
   <title>game</title>
@@ -25,14 +24,15 @@
       overscroll-behavior: none;
     }
     
-    #webgl_canvas {
+    #gl_1236 {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       display: block;
-      image-rendering: crisp-edges;
+      /* image-rendering: pixelated; */
+      image-rendering: optimizeSpeed;
       -ms-interpolation-mode: nearest-neighbor;
       transform: translateZ(0);
       touch-action: none;
@@ -41,7 +41,7 @@
 </head>
  
 <body>
-  <canvas id="webgl_canvas"></canvas>
+  <canvas id="gl_1236"></canvas>
   <script src="interface.js"></script>
   <script>
     let dpr = 1;
@@ -86,17 +86,27 @@
     }
     
     function resizeCanvas() {
-      var width = gl.canvas.clientWidth;
-      var height = gl.canvas.clientHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
+      var width = Math.round(gl.canvas.clientWidth * dpr);
+      var height = Math.round(gl.canvas.clientHeight * dpr);
       
-      if (canvas.width !== width || canvas.height !== height) {
-        dpr = Math.min(window.devicePixelRatio || 1, 3);
-        
-        canvas.width = Math.round(width * dpr);
-        canvas.height = Math.round(height * dpr);
-        
-        wasmInstance.exports.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+      if (canvas.width == width || canvas.height == height) return;
+      
+      var max_val = Math.max(width, height);
+      if (max_val > 1280) {
+        if (width > height) {
+          canvas.width = 1280;
+          canvas.height = (1280 * (height / width));
+        } else {
+          canvas.height = 1280;
+          canvas.width = (1280 * (width / height));
+        }
+      } else {
+        canvas.width = width;
+        canvas.height = height;
       }
+      
+      wasmInstance.exports.resize(gl.drawingBufferWidth, gl.drawingBufferHeight);
     }
 
     function render(timestamp) {
@@ -128,7 +138,8 @@
       window.addEventListener('orientationchange', handleOrientationChange);
       
       resizeCanvas();
-      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      // if (/Android|iPhone|iPad/i.test(navigator.userAgent)) 
+      {
         wasmInstance.exports.mobice();
       }
       
